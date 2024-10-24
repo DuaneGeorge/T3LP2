@@ -1,0 +1,63 @@
+package pe.com.cibertec.aplicacion_t3_lp2.controller;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;import ch.qos.logback.core.CoreConstants;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import pe.com.cibertec.aplicacion_t3_lp2.model.DetallePedidoEntity;
+import pe.com.cibertec.aplicacion_t3_lp2.model.Pedido;
+import pe.com.cibertec.aplicacion_t3_lp2.model.PedidoEntity;
+import pe.com.cibertec.aplicacion_t3_lp2.model.entity.ProductoEntity;
+import pe.com.cibertec.aplicacion_t3_lp2.model.entity.UsuarioEntity;
+import pe.com.cibertec.aplicacion_t3_lp2.service.PedidoService;
+
+
+@Controller
+@RequiredArgsConstructor
+public class PedidoController {
+	
+	private final PedidoService pedidoService;
+	
+	@GetMapping("/guardar_factura")
+	public String guardarFactura(HttpSession session) {
+		String correoUsuario = session.getAttribute("usuario").toString();
+		UsuarioEntity usuarioEntity = new UsuarioEntity();
+		usuarioEntity.setCorreo(correoUsuario);
+		
+		//Setear parte del pedido
+		PedidoEntity pedidoEntity = new PedidoEntity();
+		pedidoEntity.setFechaCompra(LocalDate.now());//obtener fecha actual
+		pedidoEntity.setUsuarioEntity(usuarioEntity);
+		
+		// Formar el detallepedido
+		List<DetallePedidoEntity>detallePedidoEntityList = new ArrayList<DetallePedidoEntity>();
+		
+		List<Pedido>productoSesion = null;
+		if(session.getAttribute("carrito") == null) {
+			productoSesion = new ArrayList<Pedido>();
+		}else {
+			productoSesion = (List<Pedido>)session.getAttribute("carrito");
+		}
+		//cargar detalle pedido entity
+		for(Pedido ped: productoSesion) {
+			DetallePedidoEntity detallePedidoEntity = new DetallePedidoEntity();
+			ProductoEntity productoEntity = new ProductoEntity();
+			productoEntity.setProductoId(ped.getProductoId());
+			
+			detallePedidoEntity.setProductoEntity(productoEntity);
+			detallePedidoEntity.setCantidad(ped.getCantidad());
+			detallePedidoEntity.setPedidoEntity(pedidoEntity);
+			detallePedidoEntityList.add(detallePedidoEntity);
+		}
+		
+		pedidoEntity.setDetallePedido(detallePedidoEntityList);
+		pedidoService.crearPedido(pedidoEntity);
+		session.removeAttribute("carrito");
+		return "redirect:/menu";
+		
+	}
+}
